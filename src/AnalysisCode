@@ -1,0 +1,104 @@
+import pandas as pd
+import matplotlib.pyplot as plt 
+import seaborn as sns
+import numpy as np
+
+# step 1:data set check
+df = pd.read_csv("data/creditcard.csv")
+print(df.describe())
+
+# step 2:check distribution
+class_counts = df["Class"].value_counts()
+for c, count in enumerate(class_counts): 
+    # go through every type of class, count the number of the transactions in that class
+    print("Class " + str(c) + ": " + str(count))
+plt.figure(figsize=(2, 2))
+sns.countplot(x='Class', data=df, palette='pastel')
+plt.title('Distribution of Class (0 = No Fraud, 1 = Fraud)')
+plt.xlabel('Class')
+plt.ylabel('Count')
+plt.show()
+
+# step 3: Time with Fraud Probability
+sns.set_style('whitegrid')
+#Distribution of trading hours
+plt.figure(figsize=(12, 3))
+sns.histplot(df['Time'], bins=30, kde=True, color='blue')
+plt.title('Distribution of Transaction Time')
+plt.xlabel("Time (in Seconds)")
+plt.ylabel("Frequency")
+plt.axvline(x = df['Time'].median(), color='red', linestyle='dashed', linewidth=2, label='Median Time')
+plt.axvline(x = df['Time'].mean(), color='blue', linestyle='dashed', linewidth=2, label='Mean Time')
+plt.legend()
+plt.show()
+
+#Fraud probability over time
+plt.figure(figsize=(12, 3))
+time_fruad = df.groupby('Time')['Class'].mean().reset_index()
+plt.plot(time_fruad['Time'], time_fruad['Class'], color='orange')
+plt.title('Fraud Probability Over Time')
+plt.xlabel("Time (in Seconds)")
+plt.ylabel("Fraud Probability")
+plt.grid()
+plt.show()
+
+#Fraud distribution after covert to one day
+df['Hour'] = (df['Time'] //  3600) % 24
+#Convert seconds to day hours
+hour_fraud = df.groupby('Hour')['Class'].mean().reset_index()
+#Calculates the mean of the Class columns for each hourly period.
+plt.figure(figsize=(12, 4))
+sns.barplot(data=hour_fraud, x='Hour', y='Class', palette='viridis')
+plt.title('Average Fraud Probability by Hour of the Day')
+plt.xlabel("Hour of the Day")
+plt.ylabel("Avg. Fraud Probability")
+plt.xticks(range(0, 24))
+plt.grid()
+plt.show()
+
+#step 4: Fraud distribution with amount
+# Show the fraud case distribution base on amount
+plt.figure(figsize=(3, 3))
+sns.boxplot(x='Class', y='Amount', data=df, palette=['blue', 'orange'])
+plt.title('Distribution of Amount by Fraud Class')
+plt.xlabel('Class (0 = Non-Fraud, 1 = Fraud)')
+plt.ylabel('Transaction Amount')
+plt.yscale('log')  
+plt.grid()
+plt.show()
+
+# Calculation of the percentage of fraudulent transactions in different ranges
+bins = [0, 50, 100, 200, 500, 1000, 5000, 10000, 50000] 
+labels = ['0-50', '51-100', '101-200', '201-500', '501-1000', '1001-5000', '5001-10000', '10001+']
+df['Amount Range'] = pd.cut(df['Amount'], bins=bins, labels=labels, right=False)
+
+# Calculate the number of frauds in each dollar range
+fraud_counts = df.groupby('Amount Range')['Class'].value_counts(normalize=True).unstack().fillna(0)
+fraud_counts.columns = ['Non-Fraud', 'Fraud']
+fraud_counts = fraud_counts * 100
+
+plt.figure(figsize=(6, 2))
+fraud_counts['Fraud'].plot(kind='bar', color='#d6604d', alpha=0.7, label='Fraud Percentage')
+plt.title('Percentage of Fraudulent Transactions by Transaction Amount Range')
+plt.xlabel('Transaction Amount Range')
+plt.ylabel('Percentage of Fraud (%)')
+plt.xticks(rotation=45)
+plt.grid()
+plt.axhline(y=fraud_counts['Fraud'].mean(), color='blue', linestyle='--', label='Mean Fraud Percentage')
+plt.legend()
+plt.show()
+
+# Calculation of average and median transaction amounts for fraudulent and non-fraudulent transactions
+mean_amounts = df.groupby('Class')['Amount'].agg(['mean', 'median']).reset_index()
+print("Mean and Median Transactions Amounts:")
+print(mean_amounts)
+
+#step 5:Detecting outliers in transaction amounts 
+#Boxplot of  transaction amounts versus fraud classification
+plt.figure(figsize=(6, 3))
+sns.boxplot(x='Class', y='Amount', data=df, palette=['blue', 'orange'])
+plt.title("Outlier Detection in Transaction Amount by Class")
+plt.xlabel("Class (0 = Non-Fraud, 1 = Fraud)")
+plt.ylabel("Transaction Amount")
+plt.show()
+
